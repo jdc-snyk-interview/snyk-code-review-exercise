@@ -39,8 +39,8 @@ func packageHandler(w http.ResponseWriter, r *http.Request) {
 	pkgName := vars["package"]
 	pkgVersion := vars["version"]
 
-	rootPkg := &npmPackageVersion{Name: pkgName, Dependencies: map[string]*npmPackageVersion{}}
-	if err := resolveDependencies(rootPkg, pkgVersion); err != nil {
+	rootPkg, err := resolveDependencies(pkgName, pkgVersion)
+	if err != nil {
 		println(err.Error())
 		w.WriteHeader(500)
 		return
@@ -60,29 +60,33 @@ func packageHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(stringified)
 }
 
-func resolveDependencies(pkg *npmPackageVersion, versionConstraint string) error {
-	pkgMeta, err := fetchPackageMeta(pkg.Name)
+func resolveDependencies(packageName string, versionConstraint string) (*npmPackageVersion, error) {
+	pkgMeta, err := fetchPackageMeta(packageName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	concreteVersion, err := highestCompatibleVersion(versionConstraint, pkgMeta)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	pkg.Version = concreteVersion
 
-	npmPkg, err := fetchPackage(pkg.Name, pkg.Version)
+	npmPkg, err := fetchPackage(packageName, concreteVersion)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	packageDependencies := make(map[string]*npmPackageVersion)
 	for dependencyName, dependencyVersionConstraint := range npmPkg.Dependencies {
-		dep := &npmPackageVersion{Name: dependencyName, Dependencies: map[string]*npmPackageVersion{}}
-		pkg.Dependencies[dependencyName] = dep
-		if err := resolveDependencies(dep, dependencyVersionConstraint); err != nil {
-			return err
+		subDeps, err := resolveDependencies(dependencyName, dependencyVersionConstraint)
+		if err != nil {
+			return nil, err
 		}
+		packageDependencies[dependencyName] = subDeps
 	}
-	return nil
+	return &npmPackageVersion{
+		Name:         packageName,
+		Version:      concreteVersion,
+		Dependencies: packageDependencies,
+	}, nil
 }
 
 func highestCompatibleVersion(constraintStr string, versions *npmPackageMetaResponse) (string, error) {
