@@ -27,7 +27,7 @@ func TestPackageHandler(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 
-	var data api.NpmPackageVersion
+	var data api.npmPackageVersion
 	err = json.Unmarshal(body, &data)
 	require.Nil(t, err)
 
@@ -36,7 +36,7 @@ func TestPackageHandler(t *testing.T) {
 
 	fixture, err := os.Open(filepath.Join("testdata", "react-16.13.0.json"))
 	require.Nil(t, err)
-	var fixtureObj api.NpmPackageVersion
+	var fixtureObj api.npmPackageVersion
 	require.Nil(t, json.NewDecoder(fixture).Decode(&fixtureObj))
 
 	assert.Equal(t, fixtureObj, data)

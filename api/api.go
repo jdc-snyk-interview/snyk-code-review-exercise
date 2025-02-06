@@ -28,10 +28,10 @@ type npmPackageResponse struct {
 	Dependencies map[string]string `json:"dependencies"`
 }
 
-type NpmPackageVersion struct {
+type npmPackageVersion struct {
 	Name         string                        `json:"name"`
 	Version      string                        `json:"version"`
-	Dependencies map[string]*NpmPackageVersion `json:"dependencies"`
+	Dependencies map[string]*npmPackageVersion `json:"dependencies"`
 }
 
 func packageHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +39,7 @@ func packageHandler(w http.ResponseWriter, r *http.Request) {
 	pkgName := vars["package"]
 	pkgVersion := vars["version"]
 
-	rootPkg := &NpmPackageVersion{Name: pkgName, Dependencies: map[string]*NpmPackageVersion{}}
+	rootPkg := &npmPackageVersion{Name: pkgName, Dependencies: map[string]*npmPackageVersion{}}
 	if err := resolveDependencies(rootPkg, pkgVersion); err != nil {
 		println(err.Error())
 		w.WriteHeader(500)
@@ -60,7 +60,7 @@ func packageHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(stringified)
 }
 
-func resolveDependencies(pkg *NpmPackageVersion, versionConstraint string) error {
+func resolveDependencies(pkg *npmPackageVersion, versionConstraint string) error {
 	pkgMeta, err := fetchPackageMeta(pkg.Name)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func resolveDependencies(pkg *NpmPackageVersion, versionConstraint string) error
 		return err
 	}
 	for dependencyName, dependencyVersionConstraint := range npmPkg.Dependencies {
-		dep := &NpmPackageVersion{Name: dependencyName, Dependencies: map[string]*NpmPackageVersion{}}
+		dep := &npmPackageVersion{Name: dependencyName, Dependencies: map[string]*npmPackageVersion{}}
 		pkg.Dependencies[dependencyName] = dep
 		if err := resolveDependencies(dep, dependencyVersionConstraint); err != nil {
 			return err
