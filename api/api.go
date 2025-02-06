@@ -34,6 +34,13 @@ type npmPackageVersion struct {
 	Dependencies map[string]*npmPackageVersion `json:"dependencies"`
 }
 
+type packageCacheKey struct {
+	name    string
+	version string
+}
+
+var packageNameToVersionToDeps = make(map[packageCacheKey]*npmPackageVersion)
+
 func packageHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pkgName := vars["package"]
@@ -45,6 +52,9 @@ func packageHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
+
+	fmt.Printf("called fetchPackage %v times\n", fetchPackageCount)
+	fmt.Printf("called fetchPackageMeta %v times\n", fetchPackageMetaCount)
 
 	stringified, err := json.MarshalIndent(rootPkg, "", "  ")
 	if err != nil {
@@ -76,11 +86,21 @@ func resolveDependencies(packageName string, versionConstraint string) (*npmPack
 	}
 	packageDependencies := make(map[string]*npmPackageVersion)
 	for dependencyName, dependencyVersionConstraint := range npmPkg.Dependencies {
-		subDeps, err := resolveDependencies(dependencyName, dependencyVersionConstraint)
-		if err != nil {
-			return nil, err
+		cacheKey := packageCacheKey{
+			name:    dependencyName,
+			version: dependencyVersionConstraint,
 		}
-		packageDependencies[dependencyName] = subDeps
+		cachedDeps := packageNameToVersionToDeps[cacheKey]
+		if cachedDeps != nil {
+			packageDependencies[dependencyName] = cachedDeps
+		} else {
+			subDeps, err := resolveDependencies(dependencyName, dependencyVersionConstraint)
+			if err != nil {
+				return nil, err
+			}
+			packageNameToVersionToDeps[cacheKey] = subDeps
+			packageDependencies[dependencyName] = subDeps
+		}
 	}
 	return &npmPackageVersion{
 		Name:         packageName,
@@ -116,7 +136,10 @@ func filterCompatibleVersions(constraint *semver.Constraints, pkgMeta *npmPackag
 	return compatible
 }
 
+var fetchPackageCount = 0
+
 func fetchPackage(name, version string) (*npmPackageResponse, error) {
+	fetchPackageCount++
 	resp, err := http.Get(fmt.Sprintf("https://registry.npmjs.org/%s/%s", name, version))
 	if err != nil {
 		return nil, err
@@ -133,7 +156,10 @@ func fetchPackage(name, version string) (*npmPackageResponse, error) {
 	return &parsed, nil
 }
 
+var fetchPackageMetaCount = 0
+
 func fetchPackageMeta(p string) (*npmPackageMetaResponse, error) {
+	fetchPackageMetaCount++
 	resp, err := http.Get(fmt.Sprintf("https://registry.npmjs.org/%s", p))
 	if err != nil {
 		return nil, err
