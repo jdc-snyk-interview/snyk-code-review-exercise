@@ -93,14 +93,14 @@ func resolveDependencies(packageName string, versionConstraint string) (*NpmPack
 		cachedDeps := packageNameToVersionToDeps[cacheKey]
 		if cachedDeps != nil {
 			packageDependencies[dependencyName] = cachedDeps
-		} else {
-			subDeps, err := resolveDependencies(dependencyName, dependencyVersionConstraint)
-			if err != nil {
-				return nil, err
-			}
-			packageNameToVersionToDeps[cacheKey] = subDeps
-			packageDependencies[dependencyName] = subDeps
+			continue
 		}
+		subDeps, err := resolveDependencies(dependencyName, dependencyVersionConstraint)
+		if err != nil {
+			return nil, err
+		}
+		packageNameToVersionToDeps[cacheKey] = subDeps
+		packageDependencies[dependencyName] = subDeps
 	}
 	return &NpmPackageVersion{
 		Name:         packageName,
