@@ -28,10 +28,10 @@ type npmPackageResponse struct {
 	Dependencies map[string]string `json:"dependencies"`
 }
 
-type npmPackageVersion struct {
+type NpmPackageVersion struct {
 	Name         string                        `json:"name"`
 	Version      string                        `json:"version"`
-	Dependencies map[string]*npmPackageVersion `json:"dependencies"`
+	Dependencies map[string]*NpmPackageVersion `json:"dependencies"`
 }
 
 type packageCacheKey struct {
@@ -39,7 +39,7 @@ type packageCacheKey struct {
 	version string
 }
 
-var packageNameToVersionToDeps = make(map[packageCacheKey]*npmPackageVersion)
+var packageNameToVersionToDeps = make(map[packageCacheKey]*NpmPackageVersion)
 
 func packageHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -70,7 +70,7 @@ func packageHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(stringified)
 }
 
-func resolveDependencies(packageName string, versionConstraint string) (*npmPackageVersion, error) {
+func resolveDependencies(packageName string, versionConstraint string) (*NpmPackageVersion, error) {
 	pkgMeta, err := fetchPackageMeta(packageName)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func resolveDependencies(packageName string, versionConstraint string) (*npmPack
 	if err != nil {
 		return nil, err
 	}
-	packageDependencies := make(map[string]*npmPackageVersion)
+	packageDependencies := make(map[string]*NpmPackageVersion)
 	for dependencyName, dependencyVersionConstraint := range npmPkg.Dependencies {
 		cacheKey := packageCacheKey{
 			name:    dependencyName,
@@ -102,7 +102,7 @@ func resolveDependencies(packageName string, versionConstraint string) (*npmPack
 			packageDependencies[dependencyName] = subDeps
 		}
 	}
-	return &npmPackageVersion{
+	return &NpmPackageVersion{
 		Name:         packageName,
 		Version:      concreteVersion,
 		Dependencies: packageDependencies,
