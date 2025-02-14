@@ -26,8 +26,8 @@ curl -s http://localhost:3000/package/react/16.13.0 | jq .
 ```
 
 Most of the code is boilerplate; the logic for the `/package` endpoint can be
-found in [src/package.ts](api/api.go), and some basic tests in
-[test/package.test.ts](api/api_test.go)
+found in [api/api.go](api/api.go), and some basic tests in
+[api/api_test.go](api/api_test.go)
 
 You can run the tests with:
 
